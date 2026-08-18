@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz — Unidad 1: Conceptos Fundamentales</title>
+<style>
+  :root{
+    --bg:#FAFAF8;
+    --ink:#151A2E;
+    --ink-soft:#565D78;
+    --line:#E3E5EC;
+    --blue:#2452D9;
+    --blue-soft:#EAF0FF;
+    --green:#15803D;
+    --green-soft:#E8F7EE;
+    --red:#C0362C;
+    --red-soft:#FCEBEA;
+    --amber:#B7791F;
+    --card:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:32px 16px;
+  }
+  .mono{font-family:'JetBrains Mono','Space Mono',monospace;}
+  .wrap{width:100%;max-width:720px;}
+
+  /* ---- Header / signature signal trace ---- */
+  header{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:20px 24px;
+    margin-bottom:16px;
+  }
+  .eyebrow{
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--blue);
+    font-weight:700;
+    margin-bottom:4px;
+  }
+  h1{
+    font-size:22px;
+    margin:0 0 2px 0;
+    letter-spacing:-.01em;
+  }
+  .sub{color:var(--ink-soft);font-size:13.5px;margin-bottom:14px;}
+
+  .trace-box{
+    background:#0F1530;
+    border-radius:10px;
+    padding:10px 14px 6px 14px;
+    position:relative;
+    overflow:hidden;
+  }
+  .trace-label{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:10.5px;color:#8DA0E8;letter-spacing:.08em;text-transform:uppercase;
+    margin-bottom:2px;
+  }
+  #snr-value{color:#7CF0C2;font-weight:700;}
+  svg#trace{display:block;width:100%;height:52px;}
+  #wave{fill:none;stroke:#5EE6B8;stroke-width:2;transition:d .5s ease;}
+
+  /* ---- Progress ---- */
+  .progress-row{
+    display:flex;gap:6px;margin:14px 0 20px 0;
+  }
+  .dot{
+    flex:1;height:6px;border-radius:4px;background:var(--line);
+    transition:background .3s ease;
+  }
+  .dot.done-correct{background:var(--green);}
+  .dot.done-wrong{background:var(--red);}
+  .dot.current{background:var(--blue);}
+
+  /* ---- Card ---- */
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:26px 26px 22px 26px;
+  }
+  .tier{
+    display:inline-block;
+    font-size:10.5px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    font-weight:700;
+    padding:3px 9px;
+    border-radius:999px;
+    margin-bottom:12px;
+  }
+  .tier-basico{background:var(--green-soft);color:var(--green);}
+  .tier-intermedio{background:var(--blue-soft);color:var(--blue);}
+  .tier-avanzado{background:#FBEFDD;color:var(--amber);}
+
+  .qnum{color:var(--ink-soft);font-size:13px;margin-bottom:2px;}
+  .qtext{font-size:17px;line-height:1.45;margin:0 0 18px 0;font-weight:600;}
+
+  .options{display:flex;flex-direction:column;gap:10px;}
+  .opt{
+    text-align:left;
+    border:1.5px solid var(--line);
+    background:#fff;
+    border-radius:10px;
+    padding:12px 14px;
+    font-size:14.5px;
+    line-height:1.4;
+    cursor:pointer;
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .opt:hover{border-color:var(--blue);background:var(--blue-soft);}
+  .opt .letter{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    color:var(--ink-soft);
+    flex-shrink:0;
+  }
+  .opt.correct{border-color:var(--green);background:var(--green-soft);}
+  .opt.correct .letter{color:var(--green);}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);}
+  .opt.wrong .letter{color:var(--red);}
+  .opt[disabled]{cursor:default;}
+  .opt:not(.correct):not(.wrong)[disabled]{opacity:.55;}
+
+  .feedback{
+    margin-top:16px;
+    padding:14px 16px;
+    border-radius:10px;
+    font-size:13.5px;
+    line-height:1.5;
+    display:none;
+  }
+  .feedback.show{display:block;}
+  .feedback.ok{background:var(--green-soft);color:#0F5A2E;border:1px solid #BFE6CD;}
+  .feedback.no{background:var(--red-soft);color:#8C2B23;border:1px solid #F0C4C0;}
+
+  .actions{display:flex;justify-content:flex-end;margin-top:20px;}
+  button.next{
+    background:var(--ink);
+    color:#fff;
+    border:none;
+    border-radius:10px;
+    padding:11px 20px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    display:none;
+  }
+  button.next.show{display:inline-block;}
+  button.next:hover{background:var(--blue);}
+
+  /* ---- Results ---- */
+  .results{display:none;text-align:center;padding:10px 4px;}
+  .results.show{display:block;}
+  .results .score{
+    font-family:'JetBrains Mono',monospace;
+    font-size:48px;
+    font-weight:700;
+    margin:6px 0 4px 0;
+  }
+  .results .score.high{color:var(--green);}
+  .results .score.mid{color:var(--amber);}
+  .results .score.low{color:var(--red);}
+  .results p{color:var(--ink-soft);font-size:14px;line-height:1.6;max-width:480px;margin:8px auto 20px auto;}
+  .restart{
+    background:transparent;
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    padding:10px 18px;
+    font-size:13.5px;
+    font-weight:600;
+    cursor:pointer;
+    color:var(--ink);
+  }
+  .restart:hover{border-color:var(--blue);color:var(--blue);}
+
+  @media (prefers-reduced-motion: reduce){
+    #wave{transition:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow mono">Señales y Sistemas · 6224</div>
+    <h1>Quiz — Unidad 1: Conceptos Fundamentales</h1>
+    <div class="sub">Señales, sistemas LTI, convolución y Transformada de Laplace. 10 preguntas, de básico a avanzado.</div>
+
+    <div class="trace-box">
+      <div class="trace-label mono">
+        <span>Traza de señal</span>
+        <span>SNR: <span id="snr-value">— dB</span></span>
+      </div>
+      <svg id="trace" viewBox="0 0 400 52" preserveAspectRatio="none">
+        <path id="wave" d=""/>
+      </svg>
+    </div>
+  </header>
+
+  <div class="progress-row" id="progress-row"></div>
+
+  <div class="card" id="quiz-card">
+    <div class="tier mono" id="tier-badge"></div>
+    <div class="qnum mono" id="qnum"></div>
+    <p class="qtext" id="qtext"></p>
+    <div class="options" id="options"></div>
+    <div class="feedback" id="feedback"></div>
+    <div class="actions"><button class="next" id="next-btn">Siguiente →</button></div>
+  </div>
+
+  <div class="card results" id="results-card">
+    <div class="qnum mono" id="results-eyebrow" style="text-align:center;">RESULTADO FINAL</div>
+    <div class="score" id="score"></div>
+    <p id="results-msg"></p>
+    <button class="restart" id="restart-btn">Reintentar quiz</button>
+  </div>
+
+</div>
+
+<script>
+const questions = [
+  {
+    tier: "básico",
+    q: "¿Cuál de las siguientes opciones corresponde a una señal de tiempo discreto?",
+    options: [
+      "La temperatura ambiente medida de forma continua por un sensor analógico",
+      "El valor entregado por un encoder incremental en cada pulso de reloj",
+      "La señal de voltaje en un cable telefónico analógico",
+      "El sonido de una guitarra acústica"
+    ],
+    correct: 1,
+    fb_ok: "Correcto. El encoder solo entrega un valor en instantes específicos de tiempo (cada pulso), lo que la hace una señal discreta. Las otras opciones varían de forma ininterrumpida: son continuas.",
+    fb_no: "Piensa en si la señal existe/se mide en todo instante (continua) o solo en instantes puntuales (discreta). El encoder solo genera un dato por cada pulso de reloj."
+  },
+  {
+    tier: "básico",
+    q: "Verdadero o falso: una señal periódica se repite exactamente cada cierto intervalo de tiempo fijo, llamado periodo.",
+    options: ["Verdadero", "Falso"],
+    correct: 0,
+    fb_ok: "Correcto. Esa es justamente la definición de periodicidad: x(t) = x(t + T) para todo t, donde T es el periodo.",
+    fb_no: "Repasa la definición: una señal periódica cumple x(t) = x(t + T) para todo t. Esa repetición exacta en un intervalo fijo T es la periodicidad."
+  },
+  {
+    tier: "básico",
+    q: "¿Qué dos propiedades debe cumplir un sistema para ser considerado LTI?",
+    options: [
+      "Linealidad y causalidad",
+      "Linealidad e invarianza en el tiempo",
+      "Estabilidad y causalidad",
+      "Invarianza en el tiempo y estabilidad"
+    ],
+    correct: 1,
+    fb_ok: "Correcto. LTI significa Lineal (cumple superposición y homogeneidad) e Invariante en el Tiempo (un corrimiento en la entrada produce el mismo corrimiento en la salida).",
+    fb_no: "LTI es la sigla de 'Lineal e Invariante en el Tiempo'. La causalidad y la estabilidad son propiedades adicionales, pero no son las que definen la sigla."
+  },
+  {
+    tier: "intermedio",
+    q: "La convolución de una señal de entrada x(t) con la respuesta al impulso h(t) de un sistema LTI produce:",
+    options: [
+      "La derivada de la señal de entrada",
+      "La señal de salida y(t) del sistema",
+      "La Transformada de Laplace de x(t)",
+      "El espectro de frecuencia de h(t)"
+    ],
+    correct: 1,
+    fb_ok: "Correcto. y(t) = x(t) * h(t) es precisamente cómo se calcula la salida de cualquier sistema LTI ante cualquier entrada, conociendo su respuesta al impulso.",
+    fb_no: "La convolución es la operación central para obtener la salida de un sistema LTI: y(t) = x(t) * h(t). No calcula derivadas ni transformadas directamente."
+  },
+  {
+    tier: "intermedio",
+    q: "En tiempo discreto, la convolución entre dos secuencias se calcula mediante:",
+    options: [
+      "Una integral",
+      "Una sumatoria",
+      "Una derivada",
+      "Un producto punto a punto"
+    ],
+    correct: 1,
+    fb_ok: "Correcto. En tiempo discreto la convolución es una sumatoria: y[n] = Σ x[k] h[n-k]. La integral se usa solo en el caso continuo.",
+    fb_no: "En tiempo discreto no hay integrales, se usan sumatorias. La fórmula es y[n] = Σ x[k] h[n-k]."
+  },
+  {
+    tier: "intermedio",
+    q: "Dadas las secuencias x[n] = {1, 2} (n = 0, 1) y h[n] = {1, 1} (n = 0, 1), ¿cuál es el valor de y[n] = x[n] * h[n] en n = 1?",
+    options: ["1", "2", "3", "4"],
+    correct: 2,
+    fb_ok: "Correcto. y[1] = x[0]h[1] + x[1]h[0] = (1)(1) + (2)(1) = 3.",
+    fb_no: "Aplica y[n] = Σ x[k]h[n-k]. Para n=1: y[1] = x[0]h[1] + x[1]h[0] = (1)(1) + (2)(1) = 3."
+  },
+  {
+    tier: "avanzado",
+    q: "La Transformada de Laplace representa una señal x(t) en función de la variable compleja s = σ + jω. ¿Cuál es la principal ventaja de usarla para analizar sistemas LTI?",
+    options: [
+      "Convierte ecuaciones diferenciales en ecuaciones algebraicas",
+      "Elimina el ruido de la señal",
+      "Solo funciona para señales periódicas",
+      "Reduce el orden del sistema"
+    ],
+    correct: 0,
+    fb_ok: "Correcto. Al pasar al dominio s, las ecuaciones diferenciales que describen al sistema se convierten en ecuaciones algebraicas, mucho más fáciles de resolver y manipular.",
+    fb_no: "La gran ventaja práctica de Laplace es que transforma ecuaciones diferenciales (difíciles de resolver) en ecuaciones algebraicas en s (fáciles de manipular)."
+  },
+  {
+    tier: "avanzado",
+    q: "¿Cuál es la Transformada de Laplace de x(t) = e^(-3t) u(t)?",
+    options: ["1 / (s - 3)", "1 / (s + 3)", "3 / s", "s / (s + 3)"],
+    correct: 1,
+    fb_ok: "Correcto. Para e^(-at)u(t), la transformada es 1/(s+a). Con a = 3, resulta 1/(s+3).",
+    fb_no: "Recuerda la pareja de transformada estándar: e^(-at)u(t) ↔ 1/(s+a). Con a = 3, la respuesta es 1/(s+3)."
+  },
+  {
+    tier: "avanzado",
+    q: "Un sistema tiene función de transferencia H(s) = 5 / (s + 2). ¿Dónde está su polo y qué indica sobre la estabilidad del sistema?",
+    options: [
+      "Polo en s = 2; sistema inestable",
+      "Polo en s = -2; sistema estable",
+      "Polo en s = 5; sistema estable",
+      "El sistema no tiene polos"
+    ],
+    correct: 1,
+    fb_ok: "Correcto. El polo está en s = -2 (parte real negativa), lo que indica un sistema estable: su respuesta al impulso decae con el tiempo en lugar de crecer indefinidamente.",
+    fb_no: "El polo es el valor de s que anula el denominador: s + 2 = 0 → s = -2. Al tener parte real negativa, el sistema es estable."
+  },
+  {
+    tier: "avanzado",
+    q: "En un sistema de control de motor DC, la función de transferencia se obtiene aplicando Laplace a su ecuación diferencial. ¿Qué representa físicamente el diagrama de bloques resultante?",
+    options: [
+      "Una gráfica del ruido presente en el sistema",
+      "La relación entrada-salida del sistema: cómo el voltaje de referencia se transforma en velocidad angular del motor",
+      "El circuito eléctrico interno del motor",
+      "La Transformada de Fourier del sistema"
+    ],
+    correct: 1,
+    fb_ok: "Correcto. El diagrama de bloques representa la relación funcional entre la entrada (voltaje) y la salida (velocidad angular), sin entrar en el detalle del circuito físico interno.",
+    fb_no: "El diagrama de bloques es una representación funcional: muestra cómo la señal de entrada (voltaje) se transforma en la señal de salida (velocidad angular), no el circuito físico ni el ruido."
+  }
+];
+
+let current = 0;
+let answered = false;
+const results = new Array(questions.length).fill(null); // true=correct, false=wrong
+
+const progressRow = document.getElementById('progress-row');
+const tierBadge = document.getElementById('tier-badge');
+const qnum = document.getElementById('qnum');
+const qtext = document.getElementById('qtext');
+const optionsEl = document.getElementById('options');
+const feedbackEl = document.getElementById('feedback');
+const nextBtn = document.getElementById('next-btn');
+const quizCard = document.getElementById('quiz-card');
+const resultsCard = document.getElementById('results-card');
+const waveEl = document.getElementById('wave');
+const snrValue = document.getElementById('snr-value');
+
+function buildProgress(){
+  progressRow.innerHTML = '';
+  questions.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot';
+    d.id = 'dot-' + i;
+    progressRow.appendChild(d);
+  });
+}
+
+function updateProgress(){
+  questions.forEach((_, i) => {
+    const d = document.getElementById('dot-' + i);
+    d.className = 'dot';
+    if (results[i] === true) d.classList.add('done-correct');
+    else if (results[i] === false) d.classList.add('done-wrong');
+    else if (i === current) d.classList.add('current');
+  });
+}
+
+function drawWave(){
+  // Build a sine path; noisier + lower amplitude when more wrong answers
+  const answeredCount = results.filter(r => r !== null).length;
+  const correctCount = results.filter(r => r === true).length;
+  const wrongCount = results.filter(r => r === false).length;
+  const snr = answeredCount === 0 ? null : correctCount / answeredCount;
+
+  const noiseLevel = answeredCount === 0 ? 0 : (wrongCount / answeredCount) * 14;
+  const amp = answeredCount === 0 ? 16 : 8 + (snr * 14);
+  let d = 'M 0 26 ';
+  const points = 80;
+  for (let i = 0; i <= points; i++){
+    const x = (400 / points) * i;
+    const t = i / points;
+    const base = Math.sin(t * Math.PI * 6) * amp;
+    const noise = (Math.random() - 0.5) * noiseLevel;
+    const y = 26 - base - noise;
+    d += 'L ' + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+  }
+  waveEl.setAttribute('d', d);
+
+  if (snr === null){
+    snrValue.textContent = '— dB';
+  } else if (correctCount === answeredCount){
+    snrValue.textContent = '∞ dB';
+  } else {
+    const ratio = wrongCount === 0 ? 99 : 10 * Math.log10(correctCount / wrongCount || 0.1);
+    snrValue.textContent = (isFinite(ratio) ? ratio.toFixed(1) : '0.0') + ' dB';
+  }
+}
+
+function renderQuestion(){
+  answered = false;
+  const item = questions[current];
+  tierBadge.textContent = item.tier;
+  tierBadge.className = 'tier mono tier-' + item.tier;
+  qnum.textContent = 'Pregunta ' + (current + 1) + ' de ' + questions.length;
+  qtext.textContent = item.q;
+  feedbackEl.className = 'feedback';
+  feedbackEl.textContent = '';
+  nextBtn.classList.remove('show');
+
+  optionsEl.innerHTML = '';
+  const letters = ['A','B','C','D'];
+  item.options.forEach((optText, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.innerHTML = '<span class="letter mono">' + letters[idx] + '</span><span>' + optText + '</span>';
+    btn.addEventListener('click', () => selectAnswer(idx, btn));
+    optionsEl.appendChild(btn);
+  });
+
+  updateProgress();
+  drawWave();
+}
+
+function selectAnswer(idx, btnEl){
+  if (answered) return;
+  answered = true;
+  const item = questions[current];
+  const isCorrect = idx === item.correct;
+  results[current] = isCorrect;
+
+  Array.from(optionsEl.children).forEach((btn, i) => {
+    btn.setAttribute('disabled', 'true');
+    if (i === item.correct) btn.classList.add('correct');
+    else if (i === idx) btn.classList.add('wrong');
+  });
+
+  feedbackEl.textContent = isCorrect ? item.fb_ok : item.fb_no;
+  feedbackEl.className = 'feedback show ' + (isCorrect ? 'ok' : 'no');
+  nextBtn.classList.add('show');
+  nextBtn.textContent = (current === questions.length - 1) ? 'Ver resultado →' : 'Siguiente →';
+
+  updateProgress();
+  drawWave();
+}
+
+nextBtn.addEventListener('click', () => {
+  if (current < questions.length - 1){
+    current++;
+    renderQuestion();
+  } else {
+    showResults();
+  }
+});
+
+function showResults(){
+  quizCard.style.display = 'none';
+  resultsCard.classList.add('show');
+  const correctCount = results.filter(r => r === true).length;
+  const total = questions.length;
+  const pct = Math.round((correctCount / total) * 100);
+
+  const scoreEl = document.getElementById('score');
+  scoreEl.textContent = correctCount + ' / ' + total;
+  scoreEl.className = 'score ' + (pct >= 80 ? 'high' : pct >= 50 ? 'mid' : 'low');
+
+  const msgEl = document.getElementById('results-msg');
+  if (pct >= 80){
+    msgEl.textContent = 'Excelente señal, mínimo ruido. Dominas los conceptos fundamentales de la Unidad 1: señales, sistemas LTI, convolución y Transformada de Laplace.';
+  } else if (pct >= 50){
+    msgEl.textContent = 'Vas por buen camino, pero hay algo de ruido en la señal. Repasa las preguntas falladas antes del primer parcial.';
+  } else {
+    msgEl.textContent = 'La señal está bastante distorsionada por ahora. Te recomendamos repasar los temas 1.1 a 1.3 del microcurrículo antes de continuar.';
+  }
+}
+
+document.getElementById('restart-btn').addEventListener('click', () => {
+  current = 0;
+  results.fill(null);
+  quizCard.style.display = 'block';
+  resultsCard.classList.remove('show');
+  renderQuestion();
+});
+
+buildProgress();
+renderQuestion();
+</script>
+</body>
+</html>
